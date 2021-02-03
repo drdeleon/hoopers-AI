@@ -23,8 +23,8 @@ class Hoopers(object):
     def create_board(self):
         """ Creates board. Initializes games positions. """
         board = [
-            [1, 1, 1, 1, 1, 1, 0, 1, 0, 0],
-            [1, 1, 1, 1, 0, 0, 1, 0, 0, 0],
+            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
             [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -38,32 +38,47 @@ class Hoopers(object):
         return board
 
     def move(self, coord, dest_coord):
+        """
+        Moves player piece from coord to dest_coord if posible. Changes player turn if move is completed.
+        """
         player = 1 if self.is_p1_turn else 2
-        if self.board[coord[1]-1][coord[0]-1] == player:
-            #TODO: if player can move piece at coord get valid moves
-            pass
+        if self.is_valid_move(coord, dest_coord):
+            self.board[coord[1]-1][coord[0]-1] = 0 # Remove player piece from initial coord.
+            self.board[dest_coord[1]-1][dest_coord[0]-1] = player # Add player piece to destination.
+            pp.pprint(self.board)
+            self.is_p1_turn = not self.is_p1_turn # Change turn
+        
+        else:
+            print("El movimiento no es válido!")
 
     def is_valid_move(self, coord, dest_coord):
         """ Checks if the move intended is valid. """
         player = 1 if self.is_p1_turn else 2
-        if self.board[coord[1]-1][coord[0]-1] == player:
-            valid_moves = self.valid_moves(coord,)
+        if self.board[coord[1]-1][coord[0]-1] == player: # Check if initial coord is valid for player.
+            valid_moves = self.valid_moves(coord) # Obtains valid moves from inital coord for player
+            if dest_coord in valid_moves:
+                return True
+        
+        return False
 
-    def valid_moves(self, coord:tuple, count:int=0, hoop:bool=False, valid_coords:list=[]):
-        """ Obtains frontier (searches valid moves) for all player pieces. """
+    def valid_moves(self, coord:tuple, hoop:bool=False, valid_coords:list=[]):
+        """ Obtains frontier (searches valid moves) for a given coordinate. """
 
-        self.check_direction(coord=coord, delta_x=1, delta_y=0, count=count, hoop=hoop, valid_coords=valid_coords) #horizontal +
-        self.check_direction(coord=coord, delta_x=-1, delta_y=0, count=count, hoop=hoop, valid_coords=valid_coords) #horizontal -
-        self.check_direction(coord=coord, delta_x=0, delta_y=1, count=count, hoop=hoop, valid_coords=valid_coords) #vertical +
-        self.check_direction(coord=coord, delta_x=0, delta_y=-1, count=count, hoop=hoop, valid_coords=valid_coords) #vertical -
-        self.check_direction(coord=coord, delta_x=1, delta_y=1, count=count, hoop=hoop, valid_coords=valid_coords) #major diagonal +
-        self.check_direction(coord=coord, delta_x=-1, delta_y=-1, count=count, hoop=hoop, valid_coords=valid_coords) #major diagonal -
-        self.check_direction(coord=coord, delta_x=1, delta_y=-1, count=count, hoop=hoop, valid_coords=valid_coords) #minor diagonal +
-        self.check_direction(coord=coord, delta_x=-1, delta_y=1, count=count, hoop=hoop, valid_coords=valid_coords) #minor diagonal -
+        self.check_direction(coord=coord, delta_x=1, delta_y=0, hoop=hoop, valid_coords=valid_coords) #horizontal +
+        self.check_direction(coord=coord, delta_x=-1, delta_y=0, hoop=hoop, valid_coords=valid_coords) #horizontal -
+        self.check_direction(coord=coord, delta_x=0, delta_y=1, hoop=hoop, valid_coords=valid_coords) #vertical +
+        self.check_direction(coord=coord, delta_x=0, delta_y=-1, hoop=hoop, valid_coords=valid_coords) #vertical -
+        self.check_direction(coord=coord, delta_x=1, delta_y=1, hoop=hoop, valid_coords=valid_coords) #major diagonal +
+        self.check_direction(coord=coord, delta_x=-1, delta_y=-1, hoop=hoop, valid_coords=valid_coords) #major diagonal -
+        self.check_direction(coord=coord, delta_x=1, delta_y=-1, hoop=hoop, valid_coords=valid_coords) #minor diagonal +
+        self.check_direction(coord=coord, delta_x=-1, delta_y=1, hoop=hoop, valid_coords=valid_coords) #minor diagonal -
 
         return valid_coords
 
-    def check_direction(self, coord:tuple, delta_x:int, delta_y:int, count:int, hoop:bool=False, valid_coords:list=[]):
+    def check_direction(self, coord:tuple, delta_x:int, delta_y:int, hoop:bool=False, valid_coords:list=[]):
+        """
+        Checks a direction (given by delta_x and delta_y) recursively appending valid moves to valid_coords list.
+        """
         try:
             n_x = coord[0] + delta_x
             n_y = coord[1] + delta_y
@@ -74,18 +89,15 @@ class Hoopers(object):
             next_pos = self.board[n_y-1][n_x-1]
 
             if (next_pos==0) and (not hoop): #Primer movimiento válido.
-                print((n_x, n_y))
                 valid_coords.append((n_x, n_y))
                 return
 
             elif (next_pos!=0): #Validar posible salto.
                 if self.in_board(n_x+delta_x, n_y+delta_y) and (n_x+delta_x, n_y+delta_y) not in valid_coords:
                     if self.board[n_y+delta_y-1][n_x+delta_x-1]==0:
-                        print((n_x+delta_x, n_y+delta_y))
                         valid_coords.append((n_x+delta_x, n_y+delta_y))
 
                         return self.valid_moves(coord=(n_x+delta_x, n_y+delta_y),
-                                                count=count+1,
                                                 hoop=True,
                                                 valid_coords=valid_coords)
                 return

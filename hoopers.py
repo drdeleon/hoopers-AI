@@ -31,10 +31,10 @@ class Hoopers(object):
         ]
 
         for pair in state[0]: # Player 1
-            board[pair[0]-1][pair[1]-1] = 1
+            board[pair[1]-1][pair[0]-1] = 1
 
         for pair in state[1]: # Player 2
-            board[pair[0]-1][pair[1]-1] = 2
+            board[pair[1]-1][pair[0]-1] = 2
             
         return board
 
@@ -47,7 +47,6 @@ class Hoopers(object):
         new_state[player].remove(action[0])
         new_state[player].add(action[1])
 
-        # self.board = self.update_board(new_state)
         value = self.eval(new_state) # Evaluate node heuristic function value
 
         node = Node(state=new_state,
@@ -64,7 +63,7 @@ class Hoopers(object):
         actions = []
         player = 0 if player_one else 1
         for piece in node.state[player]:
-            for dest in self.valid_moves(piece, hoop=False, valid_dests=[]):
+            for dest in self.valid_moves(node, piece, hoop=False, valid_dests=[]):
                 actions.append((piece, dest))
         return actions
 
@@ -83,32 +82,35 @@ class Hoopers(object):
 
     def is_valid_move(self, coord:tuple, dest_coord:tuple):
         """ Checks if the move intended is valid. """
-        player = 1 if self.is_p1_turn else 2
-        if self.board[coord[1]-1][coord[0]-1] == player: # Check if initial coord is valid for player.
-            valid_moves = self.valid_moves(coord) # Obtains valid moves from inital coord for player
+        player = 0 if self.is_p1_turn else 1
+        
+        if coord in self.curr_node.state[player]: # Check if initial coord is valid for player.
+            valid_moves = self.valid_moves(self.curr_node, coord, valid_dests=[]) # Obtains valid moves from inital coord for player
             if dest_coord in valid_moves:
                 return True
         
         return False
 
-    def valid_moves(self, coord:tuple, hoop:bool=False, valid_dests:list=[]):
+    def valid_moves(self, node:Node, coord:tuple, hoop:bool=False, valid_dests:list=[]):
         """ Obtains frontier (searches valid moves) for a given coordinate. """
 
-        self.check_direction(coord=coord, delta_x=1, delta_y=0, hoop=hoop, valid_dests=valid_dests) #horizontal +
-        self.check_direction(coord=coord, delta_x=-1, delta_y=0, hoop=hoop, valid_dests=valid_dests) #horizontal -
-        self.check_direction(coord=coord, delta_x=0, delta_y=1, hoop=hoop, valid_dests=valid_dests) #vertical +
-        self.check_direction(coord=coord, delta_x=0, delta_y=-1, hoop=hoop, valid_dests=valid_dests) #vertical -
-        self.check_direction(coord=coord, delta_x=1, delta_y=1, hoop=hoop, valid_dests=valid_dests) #major diagonal +
-        self.check_direction(coord=coord, delta_x=-1, delta_y=-1, hoop=hoop, valid_dests=valid_dests) #major diagonal -
-        self.check_direction(coord=coord, delta_x=1, delta_y=-1, hoop=hoop, valid_dests=valid_dests) #minor diagonal +
-        self.check_direction(coord=coord, delta_x=-1, delta_y=1, hoop=hoop, valid_dests=valid_dests) #minor diagonal -
+        self.check_direction(coord=coord, node=node, delta_x=1, delta_y=0, hoop=hoop, valid_dests=valid_dests) #horizontal +
+        self.check_direction(coord=coord, node=node, delta_x=-1, delta_y=0, hoop=hoop, valid_dests=valid_dests) #horizontal -
+        self.check_direction(coord=coord, node=node, delta_x=0, delta_y=1, hoop=hoop, valid_dests=valid_dests) #vertical +
+        self.check_direction(coord=coord, node=node, delta_x=0, delta_y=-1, hoop=hoop, valid_dests=valid_dests) #vertical -
+        self.check_direction(coord=coord, node=node, delta_x=1, delta_y=1, hoop=hoop, valid_dests=valid_dests) #major diagonal +
+        self.check_direction(coord=coord, node=node, delta_x=-1, delta_y=-1, hoop=hoop, valid_dests=valid_dests) #major diagonal -
+        self.check_direction(coord=coord, node=node, delta_x=1, delta_y=-1, hoop=hoop, valid_dests=valid_dests) #minor diagonal +
+        self.check_direction(coord=coord, node=node, delta_x=-1, delta_y=1, hoop=hoop, valid_dests=valid_dests) #minor diagonal -
 
         return valid_dests
 
-    def check_direction(self, coord:tuple, delta_x:int, delta_y:int, hoop:bool=False, valid_dests:list=[]):
+    def check_direction(self, coord:tuple, node:Node, delta_x:int, delta_y:int, hoop:bool=False, valid_dests:list=[]):
         """
         Checks a direction (given by delta_x and delta_y) recursively appending valid moves to valid_dests list.
         """
+        board = self.get_state_board(node.state)
+
         try:
             n_x = coord[0] + delta_x
             n_y = coord[1] + delta_y
@@ -116,7 +118,7 @@ class Hoopers(object):
             if not self.in_board(n_x, n_y): #Límites del tablero.
                 return
 
-            next_pos = self.board[n_y-1][n_x-1]
+            next_pos = board[n_y-1][n_x-1]
 
             if (next_pos==0) and (not hoop): #Primer movimiento válido.
                 valid_dests.append((n_x, n_y))
@@ -124,10 +126,11 @@ class Hoopers(object):
 
             elif (next_pos!=0): #Validar posible salto.
                 if self.in_board(n_x+delta_x, n_y+delta_y) and (n_x+delta_x, n_y+delta_y) not in valid_dests:
-                    if self.board[n_y+delta_y-1][n_x+delta_x-1]==0:
+                    if board[n_y+delta_y-1][n_x+delta_x-1]==0:
                         valid_dests.append((n_x+delta_x, n_y+delta_y))
 
-                        return self.valid_moves(coord=(n_x+delta_x, n_y+delta_y),
+                        return self.valid_moves(node=node,
+                                                coord=(n_x+delta_x, n_y+delta_y),
                                                 hoop=True,
                                                 valid_dests=valid_dests)
                 return

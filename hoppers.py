@@ -17,8 +17,7 @@ class Hoppers(object):
         self.curr_node = Node(
             state=init_state,
             parent=None,
-            action=None,
-            value=None
+            action=None
         )
 
 
@@ -60,13 +59,10 @@ class Hoppers(object):
         
         new_state[player][(new_state[player] == action[0]).all(axis=1)] = action[1]
 
-        value = self.eval(new_state) # Evaluate node heuristic function value
-
         node = Node(
             state=new_state,
             parent=node,
             action=action,
-            value=value
         )
 
         return node
@@ -274,34 +270,29 @@ class Hoppers(object):
         board = self.get_state_board(node.state)
 
         #Player 1
-        is_p1_winner = True
-        p1 = 5
-        for j in range(0, 5):
-            for i in range(p1, 0, -1):
-                 is_p1_winner = is_p1_winner and board[j][i-1] == 2
-            p1 -= 1
+        p1_wins = np.array([
+            (6,10), (7,10), (8,10), (9,10), (10,10),
+            (7,9), (8,9), (9,9), (10,9), (8, 8),
+            (9,8), (10,8), (9,7), (10,7), (10, 6)
+        ])
 
         #Player 2
-        is_p2_winner = True
-        p2 = 0
-        for j in range(9, 4, -1):
-            for i in range(9, p2+4, -1):
-                is_p2_winner = is_p2_winner and board[i][j] == 1
-            p2 += 1
+        p2_wins = np.array([
+            (1,1), (1,2), (1,3), (1,4), (1,5),
+            (2,1), (2,2), (2,3), (2,4), (3,1),
+            (3,2), (3,3), (4,1), (4,2), (5, 1)
+        ])
 
-        return is_p2_winner or is_p1_winner
+        return np.isin(node.state[0], p1_wins).all() or np.isin(node.state[1], p2_wins).all()
 
 
     def eval(self, state):
-        """ Estimates a state's utility. """
+        """ Estimates a state's utility.
 
-        heuristic = 0
-        for piece in state[0]:
-            heuristic += piece[0] + piece[1]
-        for piece in state[1]:
-            heuristic -= piece[0] + piece[1]
+            Euclidean distance to objective.
+        """
 
-        return heuristic
+        return (state[0]**2).sum()-((state[1]-10)**2).sum()
 
 
     def minimax(
@@ -362,34 +353,55 @@ class Hoppers(object):
             return v, move
 
 
-    def alpha_beta_search(self, node, depth):
+    def alpha_beta_search(self, node:Node, depth:int, max_player:bool):
         player = 1 if self.player_one_turn else 0
-        value, move = self.max_value(node, -math.inf, math.inf, depth)
-        return move
+
+        if max_player:
+            value, move = self.max_value(node, -math.inf, math.inf, depth)
+        else:
+            value, move = self.min_value(node, -math.inf, math.inf, depth)
+
+        return value, move
 
 
-    def max_value(self, node, alpha, beta, depth):
+    def max_value(self, node:Node, alpha:float, beta:float, depth:int):
         if self.is_terminal(node) or depth<=0:
-            return self.eval(node), None
+            return self.eval(node.state), None
+
         v = -math.inf
-        for a in self.actions(node, True):
-            v2, a2 = self.min_value(self.result(node, a, False), alpha, beta, depth-1)
+        for a in self.actions(node, player_one=True):
+            v2, a2 = self.min_value(
+                self.result(node, a, player_one=True),
+                alpha,
+                beta,
+                depth-1
+            )
             if v2 > v:
                 v, move = v2, a
                 alpha = max(alpha, v)
             if v >= beta:
                 return v, move
 
+        return v, move
 
-    def min_value(self, node, alpha, beta, depth):
+
+    def min_value(self, node:Node, alpha:float, beta:float, depth:int):
         if self.is_terminal(node) or depth<=0:
-            return self.eval(node), None
+            return self.eval(node.state), None
+
         v = math.inf
-        for a in self.actions(node, True):
-            v2, a2 = self.max_value(self.result(node, a, True), alpha, beta, depth-1)
+        for a in self.actions(node, player_one=False):
+            v2, a2 = self.max_value(
+                self.result(node, a, player_one=False),
+                alpha,
+                beta,
+                depth-1
+            )
             if v2 < v:
                 v, move = v2, a
-                alpha = min(alpha, v)
-            if v >= beta:
+                beta = min(beta, v)
+            if v <= alpha:
                 return v, move
+
+        return v, move
 

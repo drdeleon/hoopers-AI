@@ -3,11 +3,10 @@ Each reached states can be sotred s a lookup table (dict) where each key is a st
 """
 
 class Node:
-    def __init__(self, state, parent, action, value) -> None:
+    def __init__(self, state, parent, action):
         self.state = state
         self.parent = parent
         self.action = action
-        self.value = value
 
 
 

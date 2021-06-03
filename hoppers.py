@@ -292,7 +292,7 @@ class Hoppers(object):
             Euclidean distance to objective.
         """
 
-        return (state[0]**2).sum()-((state[1]-10)**2).sum()
+        return ((state[0]-1)**2).sum()-((state[1]-10)**2).sum()
 
 
     def minimax(

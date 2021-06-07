@@ -1,5 +1,4 @@
 from hoppers import *
-import pprint as pp
 import time
 
 
@@ -66,14 +65,22 @@ def ai_turn(curr_player:int, game:Hoppers):
 
     print("AI procesando...")
     is_max = curr_player == 1
+
     start = time.time()
 
+    if game.moves_count < 86 or 90 < game.moves_count:
+        val, move = game.alpha_beta_search(
+            node=game.curr_node,
+            depth=2,
+            max_player=is_max
+        )
 
-    val, move = game.alpha_beta_search(
-        node=game.curr_node,
-        depth=3,
-        max_player=is_max
-    )
+    else:
+        val, move = game.alpha_beta_search(
+            node=game.curr_node,
+            depth=3,
+            max_player=is_max
+        )
 
     end = time.time()
 
@@ -86,14 +93,14 @@ def ai_turn(curr_player:int, game:Hoppers):
 if __name__ == "__main__":
     game = Hoppers(init_state=np.array([
         [
-            (1,1), (1,2), (1,3), (1,4), (1,5),
-            (2,1), (2,2), (2,3), (2,4), (3,1),
-            (3,2), (3,3), (4,1), (4,2), (5, 1)
+            (0,0), (0,1), (0,2), (0,3), (0,4),
+            (1,0), (1,1), (1,2), (1,3), (2,0),
+            (2,1), (2,2), (3,0), (3,1), (4,0)
         ],
         [
-            (6,10), (7,10), (8,10), (9,10), (10,10),
-            (7,9), (8,9), (9,9), (10,9), (8, 8),
-            (9,8), (10,8), (9,7), (10,7), (10, 6)
+            (5,9), (6,9), (7,9), (8,9), (9,9),
+            (6,8), (7,8), (8,8), (9,8), (7, 7),
+            (8,7), (9,7), (8,6), (9,6), (9, 5)
         ]
     ]))
 

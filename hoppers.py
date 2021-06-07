@@ -1,6 +1,5 @@
 """ Hoppers game implementation. """
 
-import pprint as pp
 from tree import Node
 import math
 import numpy as np
@@ -13,6 +12,7 @@ class Hoppers(object):
         self.player_one_turn = True
         
         self.board = self.get_state_board(init_state)
+        self.moves_count = 1
 
         self.curr_node = Node(
             state=init_state,
@@ -42,11 +42,11 @@ class Hoppers(object):
 
         # Player 1
         for pair in state[0]:
-            board[pair[1]-1][pair[0]-1] = 1
+            board[pair[1]][pair[0]] = 1
 
         # Player 2
         for pair in state[1]:
-            board[pair[1]-1][pair[0]-1] = 2
+            board[pair[1]][pair[0]] = 2
             
         return board
 
@@ -92,16 +92,19 @@ class Hoppers(object):
     def move(self, coord:np.ndarray, dest_coord:np.ndarray):
         """ Moves player piece from coord to dest_coord if posible. Changes player turn if move is completed. """
 
-        if self.is_valid_move(coord, dest_coord):
-            self.curr_node = self.result(
-                self.curr_node,
-                (coord, dest_coord),
-                self.player_one_turn
-            )
-            self.board = self.get_state_board(self.curr_node.state)
-            self.player_one_turn = not self.player_one_turn # Change turn
+        # if self.is_valid_move(coord, dest_coord):
+        self.curr_node = self.result(
+            self.curr_node,
+            (coord, dest_coord),
+            self.player_one_turn
+        )
 
-            return True
+        self.board = self.get_state_board(self.curr_node.state)
+        self.player_one_turn = not self.player_one_turn # Change turn
+        self.moves_count += 1
+        print("Move number:", self.moves_count)
+
+        return True
         
         return False
 
@@ -128,85 +131,19 @@ class Hoppers(object):
     ):
         """ Obtains frontier (searches valid moves) for a given coordinate. """
 
-        # HORIZONTAL +
-        self.check_direction(
-            coord=coord,
-            node=node,
-            delta_x=1,
-            delta_y=0,
-            hoop=hoop,
-            valid_dests=valid_dests
-        )
+        deltas = [-1, 0, 1]
 
-        # HORIZONTAL -
-        self.check_direction(
-            coord=coord,
-            node=node,
-            delta_x=-1,
-            delta_y=0,
-            hoop=hoop,
-            valid_dests=valid_dests
-        )
-
-        # VERTICAL +
-        self.check_direction(
-            coord=coord,
-            node=node,
-            delta_x=0,
-            delta_y=1,
-            hoop=hoop,
-            valid_dests=valid_dests
-        )
-
-        # VERTICAL -
-        self.check_direction(
-            coord=coord,
-            node=node,
-            delta_x=0,
-            delta_y=-1,
-            hoop=hoop,
-            valid_dests=valid_dests
-        )
-
-        # MAJOR DIAGONAL +
-        self.check_direction(
-            coord=coord,
-            node=node,
-            delta_x=1,
-            delta_y=1,
-            hoop=hoop,
-            valid_dests=valid_dests
-        )
-
-        # MAJOR DIAGONAL -
-        self.check_direction(
-            coord=coord,
-            node=node,
-            delta_x=-1,
-            delta_y=-1,
-            hoop=hoop,
-            valid_dests=valid_dests
-        )
-
-        # MINOR DIAGONAL +
-        self.check_direction(
-            coord=coord,
-            node=node,
-            delta_x=1,
-            delta_y=-1,
-            hoop=hoop,
-            valid_dests=valid_dests
-        )
-
-        # MINOR DIAGONAL -
-        self.check_direction(
-            coord=coord,
-            node=node,
-            delta_x=-1,
-            delta_y=1,
-            hoop=hoop,
-            valid_dests=valid_dests
-        )
+        for d_x in deltas:
+            for d_y in deltas:
+                if not (d_y==0 and d_x==0):
+                    self.check_direction(
+                        coord=coord,
+                        node=node,
+                        delta_x=d_x,
+                        delta_y=d_y,
+                        hoop=hoop,
+                        valid_dests=valid_dests
+                    )
 
         return valid_dests
 
@@ -223,42 +160,38 @@ class Hoppers(object):
         """ Checks a direction (given by delta_x and delta_y) recursively appending valid moves to valid_dests list. """
 
         board = self.get_state_board(node.state)
+        n_x = coord[0] + delta_x
+        n_y = coord[1] + delta_y
 
-        try:
-            n_x = coord[0] + delta_x
-            n_y = coord[1] + delta_y
+        if not self.in_board(n_x, n_y): #Límites del tablero.
+            return
 
-            if not self.in_board(n_x, n_y): #Límites del tablero.
-                return
+        next_pos = board[n_y][n_x]
 
-            next_pos = board[n_y-1][n_x-1]
+        if (next_pos==0) and (not hoop): #Primer movimiento válido.
+            valid_dests.append((n_x, n_y))
+            return
 
-            if (next_pos==0) and (not hoop): #Primer movimiento válido.
-                valid_dests.append((n_x, n_y))
-                return
+        elif (next_pos!=0): #Validar posible salto.
+            hoop_x, hoop_y = n_x+delta_x, n_y+delta_y
+            if self.in_board(hoop_x, hoop_y) and (hoop_x, hoop_y) not in valid_dests:
+                if board[hoop_y][hoop_x]==0:
+                    valid_dests.append((hoop_x, hoop_y))
 
-            elif (next_pos!=0): #Validar posible salto.
-                if self.in_board(n_x+delta_x, n_y+delta_y) and (n_x+delta_x, n_y+delta_y) not in valid_dests:
-                    if board[n_y+delta_y-1][n_x+delta_x-1]==0:
-                        valid_dests.append((n_x+delta_x, n_y+delta_y))
+                    return self.valid_moves(
+                        node=node,
+                        coord=(hoop_x, hoop_y),
+                        hoop=True,
+                        valid_dests=valid_dests
+                    )
+            return
 
-                        return self.valid_moves(
-                            node=node,
-                            coord=(n_x+delta_x, n_y+delta_y),
-                            hoop=True,
-                            valid_dests=valid_dests
-                        )
-                return
-
-            else:
-                return
-
-        except Exception:
+        else:
             return
 
 
     def in_board(self, X:int, Y:int):
-        if X <= 10 and X >= 1 and Y <= 10 and Y >= 1:
+        if X <= 9 and X >= 0 and Y <= 9 and Y >= 0:
             return True
 
         return False
@@ -267,20 +200,18 @@ class Hoppers(object):
     def is_terminal(self, node:Node):
         """ A terminal test, which is true when the game is over and lfase otherwise. """
 
-        board = self.get_state_board(node.state)
-
         #Player 1
         p1_wins = np.array([
-            (6,10), (7,10), (8,10), (9,10), (10,10),
-            (7,9), (8,9), (9,9), (10,9), (8, 8),
-            (9,8), (10,8), (9,7), (10,7), (10, 6)
+            (5,9), (6,9), (7,9), (8,9), (9,9),
+            (6,8), (7,8), (8,8), (9,8), (7,7),
+            (8,7), (9,7), (8,6), (9,6), (9,5)
         ])
 
         #Player 2
         p2_wins = np.array([
-            (1,1), (1,2), (1,3), (1,4), (1,5),
-            (2,1), (2,2), (2,3), (2,4), (3,1),
-            (3,2), (3,3), (4,1), (4,2), (5, 1)
+            (0,0), (0,1), (0,2), (0,3), (0,4),
+            (1,0), (1,1), (1,2), (1,3), (2,0),
+            (2,1), (2,2), (3,0), (3,1), (4,0)
         ])
 
         return np.isin(node.state[0], p1_wins).all() or np.isin(node.state[1], p2_wins).all()
@@ -290,9 +221,64 @@ class Hoppers(object):
         """ Estimates a state's utility.
 
             Euclidean distance to objective.
+            Distance from origin minus distance from objective.
         """
 
-        return ((state[0]-1)**2).sum()-((state[1]-10)**2).sum()
+        return ( ( state[0]**2 - (state[0]-9)**2 ) - ( (state[1]-9)**2 - state[1]**2 ) ).sum()
+        # return ( - (state[0]-9)**2 + state[1]**2 ).sum()
+
+
+    def alpha_beta_search(self, node:Node, depth:int, max_player:bool):
+        player = 1 if self.player_one_turn else 0
+
+        if max_player:
+            value, move = self.max_value(node, -math.inf, math.inf, depth)
+        else:
+            value, move = self.min_value(node, -math.inf, math.inf, depth)
+
+        return value, move
+
+
+    def max_value(self, node:Node, alpha:float, beta:float, depth:int):
+        if self.is_terminal(node) or depth<=0:
+            return self.eval(node.state), None
+
+        v = -math.inf
+        for a in self.actions(node, player_one=True):
+            v2, a2 = self.min_value(
+                self.result(node, a, player_one=True),
+                alpha,
+                beta,
+                depth-1
+            )
+            if v2 > v:
+                v, move = v2, a
+                alpha = max(alpha, v)
+            if v >= beta:
+                return v, move
+
+        return v, move
+
+
+    def min_value(self, node:Node, alpha:float, beta:float, depth:int):
+        if self.is_terminal(node) or depth<=0:
+            return self.eval(node.state), None
+
+        v = math.inf
+        for a in self.actions(node, player_one=False):
+            v2, a2 = self.max_value(
+                self.result(node, a, player_one=False),
+                alpha,
+                beta,
+                depth-1
+            )
+            if v2 < v:
+                v, move = v2, a
+                beta = min(beta, v)
+            if v <= alpha:
+                return v, move
+
+        return v, move
 
 
     def minimax(
@@ -351,57 +337,3 @@ class Hoppers(object):
                     break
 
             return v, move
-
-
-    def alpha_beta_search(self, node:Node, depth:int, max_player:bool):
-        player = 1 if self.player_one_turn else 0
-
-        if max_player:
-            value, move = self.max_value(node, -math.inf, math.inf, depth)
-        else:
-            value, move = self.min_value(node, -math.inf, math.inf, depth)
-
-        return value, move
-
-
-    def max_value(self, node:Node, alpha:float, beta:float, depth:int):
-        if self.is_terminal(node) or depth<=0:
-            return self.eval(node.state), None
-
-        v = -math.inf
-        for a in self.actions(node, player_one=True):
-            v2, a2 = self.min_value(
-                self.result(node, a, player_one=True),
-                alpha,
-                beta,
-                depth-1
-            )
-            if v2 > v:
-                v, move = v2, a
-                alpha = max(alpha, v)
-            if v >= beta:
-                return v, move
-
-        return v, move
-
-
-    def min_value(self, node:Node, alpha:float, beta:float, depth:int):
-        if self.is_terminal(node) or depth<=0:
-            return self.eval(node.state), None
-
-        v = math.inf
-        for a in self.actions(node, player_one=False):
-            v2, a2 = self.max_value(
-                self.result(node, a, player_one=False),
-                alpha,
-                beta,
-                depth-1
-            )
-            if v2 < v:
-                v, move = v2, a
-                beta = min(beta, v)
-            if v <= alpha:
-                return v, move
-
-        return v, move
-

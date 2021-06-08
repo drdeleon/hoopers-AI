@@ -214,7 +214,17 @@ class Hoppers(object):
             (2,1), (2,2), (3,0), (3,1), (4,0)
         ])
 
-        return np.isin(node.state[0], p1_wins).all() or np.isin(node.state[1], p2_wins).all()
+        p1_wins = np.isin(node.state[0], p1_wins).all()
+        p2_wins = np.isin(node.state[1], p2_wins).all()
+
+        if p1_wins:
+            return 1
+        
+        elif p2_wins:
+            return 2
+
+        else:
+            return 0
 
 
     def eval(self, state):
@@ -223,9 +233,8 @@ class Hoppers(object):
             Euclidean distance to objective.
             Distance from origin minus distance from objective.
         """
-
-        return ( ( state[0]**2 - (state[0]-9)**2 ) - ( (state[1]-9)**2 - state[1]**2 ) ).sum()
-        # return ( - (state[0]-9)**2 + state[1]**2 ).sum()
+        
+        return (( state[0]**2 - (state[0]-9)**2) - ((state[1]-9)**2 - state[1]**2) ).sum()
 
 
     def alpha_beta_search(self, node:Node, depth:int, max_player:bool):
@@ -240,8 +249,16 @@ class Hoppers(object):
 
 
     def max_value(self, node:Node, alpha:float, beta:float, depth:int):
-        if self.is_terminal(node) or depth<=0:
-            return self.eval(node.state), None
+        is_terminal = self.is_terminal(node)
+        if is_terminal != 0 or depth<=0:
+            if is_terminal == 0:
+                return self.eval(node.state), None
+
+            elif is_terminal == 1:
+                return math.inf, None
+
+            else:
+                return -math.inf, None
 
         v = -math.inf
         for a in self.actions(node, player_one=True):
@@ -261,8 +278,16 @@ class Hoppers(object):
 
 
     def min_value(self, node:Node, alpha:float, beta:float, depth:int):
-        if self.is_terminal(node) or depth<=0:
-            return self.eval(node.state), None
+        is_terminal = self.is_terminal(node)
+        if is_terminal != 0 or depth<=0:
+            if is_terminal == 0:
+                return self.eval(node.state), None
+
+            elif is_terminal == 1:
+                return math.inf, None
+
+            else:
+                return -math.inf, None
 
         v = math.inf
         for a in self.actions(node, player_one=False):
@@ -280,60 +305,3 @@ class Hoppers(object):
 
         return v, move
 
-
-    def minimax(
-        self,
-        node:Node,
-        depth:int,
-        alpha:float,
-        beta:float,
-        max_player:bool
-    ):
-        """ Alpha Beta Search with player one as Max and player two as Min. """
-
-        if depth==0 or self.is_terminal(node):
-            return node.value, None
-
-        if max_player:
-            v = -math.inf
-            move = None
-
-            for action in self.actions(node, True): # Player 1 actions (MAX)
-                v2, a2 = self.minimax(
-                    node = self.result(node, action, True),
-                    depth = depth-1,
-                    alpha = alpha,
-                    beta = beta,
-                    max_player = False
-                )
-
-                if v2 > v:
-                    v, move = v2, action
-                    alpha = max(alpha, v)
-
-                if beta <= alpha: #pruning
-                    break
-
-            return v, move
-
-        else:
-            v = math.inf
-            move = None
-
-            for action in self.actions(node, False): # Player 2 actions (MIN)
-                v2, a2 = self.minimax(
-                    node = self.result(node, action, False),
-                    depth = depth-1,
-                    alpha = alpha,
-                    beta = beta,
-                    max_player = True
-                )
-
-                if v2 < v:
-                    v, move = v2, action
-                    beta = min(beta, v)
-
-                if beta <= alpha: # pruning
-                    break
-
-            return v, move

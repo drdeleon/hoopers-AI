@@ -8,7 +8,6 @@ MAIN_MENU = """
     1. PvP
     2. PvC
     3. CvP
-    4. CvC
 """
 
 def print_board(board, valid_moves=None):
@@ -17,17 +16,17 @@ def print_board(board, valid_moves=None):
     board_str = ""
     if valid_moves != None:
         for pair in valid_moves:
-            board[pair[0]-1][pair[1]-1] = 3
+            board[pair[1]][pair[0]] = 3
 
-    board_str += "    1  2  3  4  5  6  7  8  9  10 \n\n"
+    board_str += "    0  1  2  3  4  5  6  7  8  9 \n\n"
 
     for idx, row in enumerate(board):
-        board_str += "%i  " % (idx + 1) if idx < 9 else "%i " % (idx + 1)
+        board_str += "%i  " % (idx)
         for char in row:
             if char == 1:
-                board_str += " W "
+                board_str += " O "
             elif char == 2:
-                board_str += " B "
+                board_str += " X "
             elif char == 3:
                 board_str += " * "
             else:
@@ -105,8 +104,8 @@ if __name__ == "__main__":
     ]))
 
     print(MAIN_MENU)
-    # game_mode = int(input("¿Qué modalidad quiere usar? "))
-    game_mode = 4
+    game_mode = int(input("¿Qué modalidad quiere usar? "))
+    # game_mode = 2
 
     playing = True
 
@@ -128,7 +127,6 @@ if __name__ == "__main__":
                 elif not game.player_one_turn:
                     init, dest = player_turn(curr_player, game)
                     is_valid = game.move(init, dest)
-
 
         elif game_mode == 2: # PvC
             while is_valid == False:
